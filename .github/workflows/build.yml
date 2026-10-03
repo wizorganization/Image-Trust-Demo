@@ -9,7 +9,7 @@ on:
 
 permissions:
   contents: read
-  id-token: write
+  id-token: write # Required for Azure OIDC authentication
 
 concurrency:
   group: build-${{ github.ref }}
@@ -18,7 +18,7 @@ concurrency:
 jobs:
   directory-scan:
     name: Scan source with Wiz
-    uses: arun-wiz/wiz-workflows/.github/workflows/wiz-dir-scan.yml@63f6022dbbc90eb42a53cef4f32c5607f0e438ec # v1
+    uses: wizorganization/wiz-workflows/.github/workflows/wiz-dir-scan.yml@63f6022dbbc90eb42a53cef4f32c5607f0e438ec # v1
     with:
       scan_types: all
       path: .
@@ -35,11 +35,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
-      AWS_REGION: ${{ vars.AWS_REGION }}
-      AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
-      ECR_REGISTRY: ${{ vars.ECR_REGISTRY }}
-      ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
-      IMAGE_URI: ${{ vars.ECR_REGISTRY }}/${{ vars.ECR_REPOSITORY }}:${{ github.sha }}
+      ACR_NAME: ${{ vars.ACR_NAME }}
+      ACR_REPOSITORY: ${{ vars.ACR_REPOSITORY }}
+      IMAGE_URI: ${{ vars.ACR_NAME }}.azurecr.io/${{ vars.ACR_REPOSITORY }}:${{ github.sha }}
       REPORT_DIR: /tmp/wiz-image-reports
     steps:
       - name: Check out repository
@@ -51,7 +49,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for name in AWS_REGION AWS_ROLE_ARN ECR_REGISTRY ECR_REPOSITORY; do
+          for name in ACR_NAME ACR_REPOSITORY; do
             [[ -n "${!name}" ]] || { echo "Missing GitHub configuration: $name" >&2; exit 2; }
           done
 
@@ -67,7 +65,7 @@ jobs:
 
       - name: Scan image with Wiz
         id: wiz_scan
-        uses: arun-wiz/wiz-workflows/.github/actions/wiz-image-scan@63f6022dbbc90eb42a53cef4f32c5607f0e438ec # v1
+        uses: wizorganization/wiz-workflows/.github/actions/wiz-image-scan@63f6022dbbc90eb42a53cef4f32c5607f0e438ec # v1
         with:
           image: ${{ env.IMAGE_URI }}
           scan_types: all
@@ -79,42 +77,40 @@ jobs:
           wiz_client_id: ${{ secrets.WIZ_CLIENT_ID }}
           wiz_client_secret: ${{ secrets.WIZ_CLIENT_SECRET }}
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
+      - name: Log in to Azure
+        uses: azure/login@v2
         with:
-          role-to-assume: ${{ env.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Log in to ECR
+      - name: Log in to ACR
         shell: bash
         run: |
           set -euo pipefail
-          aws ecr get-login-password --region "$AWS_REGION" |
-            docker login --username AWS --password-stdin "$ECR_REGISTRY"
+          az acr login --name "$ACR_NAME"
 
       - name: Push scanned image
         id: push
         shell: bash
         run: |
           set -euo pipefail
-          docker push "$IMAGE_URI" 2>&1 | tee "$REPORT_DIR/docker-push.log"
+          docker push "$IMAGE_URI" 2>&1 \vert{} tee "$REPORT_DIR/docker-push.log"
 
-          digest=""
-          for _ in $(seq 1 5); do
-            digest=$(aws ecr describe-images \
-              --repository-name "$ECR_REPOSITORY" \
-              --image-ids "imageTag=$GITHUB_SHA" \
-              --query 'imageDetails[0].imageDigest' \
-              --output text 2>/dev/null || true)
-            [[ "$digest" == sha256:* ]] && break
-            sleep 2
-          done
+          # Retrieve the digest directly using Azure CLI
+          digest=$(az acr repository show \
+            --name "$ACR_NAME" \
+            --image "$ACR_REPOSITORY:$GITHUB_SHA" \
+            --query digest \
+            --output tsv)
+            
           [[ "$digest" == sha256:* ]] || { echo "Could not resolve pushed image digest" >&2; exit 1; }
           echo "digest=$digest" >> "$GITHUB_OUTPUT"
 
       - name: Add pushed digest to Wiz Image Trust
         id: wiz_tag
-        uses: arun-wiz/wiz-workflows/.github/actions/wiz-image-tag@63f6022dbbc90eb42a53cef4f32c5607f0e438ec # v1
+        # Fixed: Swapped the unverified 'arun-wiz' fork for the official 'wizorganization' repo
+        uses: wizorganization/wiz-workflows/.github/actions/wiz-image-tag@63f6022dbbc90eb42a53cef4f32c5607f0e438ec # v1
         with:
           image: ${{ env.IMAGE_URI }}
           image_digest: ${{ steps.push.outputs.digest }}
@@ -133,16 +129,16 @@ jobs:
           {
             echo "## Published trusted image"
             echo
-            echo "\`$ECR_REGISTRY/$ECR_REPOSITORY@$IMAGE_DIGEST\`"
+            echo "\`${ACR_NAME}.azurecr.io/$ACR_REPOSITORY@$IMAGE_DIGEST\`"
             echo
             echo "Release tag: \`$GITHUB_SHA\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Log out of ECR
+      - name: Log out of ACR
         if: always()
         continue-on-error: true
         shell: bash
-        run: docker logout "$ECR_REGISTRY"
+        run: docker logout "${ACR_NAME}.azurecr.io"
 
       - name: Upload Wiz image reports
         if: always()
