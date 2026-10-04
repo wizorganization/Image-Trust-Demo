@@ -18,7 +18,7 @@ concurrency:
 jobs:
   directory-scan:
     name: Scan source with Wiz
-    uses: wizorganization/wiz-workflows/.github/workflows/wiz-dir-scan.yml@1b31a1735ea1722ac2d8e08aa2441c153aa247be # v1
+    uses: wizorganization/wiz-workflows/.github/workflows/wiz-dir-scan.yml@dfe486c34fbab98a8c8e819a3aaa016fac726c0d # v1
     with:
       scan_types: all
       path: .
