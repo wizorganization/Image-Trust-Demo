@@ -65,7 +65,7 @@ jobs:
 
       - name: Scan image with Wiz
         id: wiz_scan
-        uses: wizorganization/wiz-workflows/.github/actions/wiz-image-scan@4154096fc2db686c9bb943ecc8243fc465df5a4d # v1
+        uses: wizorganization/wiz-workflows/.github/actions/wiz-image-scan@142a8d3f68adb2357097a8c0a07c5ca9c010481d # v1
         with:
           image: ${{ env.IMAGE_URI }}
           scan_types: all
