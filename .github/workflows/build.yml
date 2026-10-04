@@ -95,7 +95,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          docker push "$IMAGE_URI" 2>&1 \vert{} tee "$REPORT_DIR/docker-push.log"
+          docker push "$IMAGE_URI" 2>&1 | tee "$REPORT_DIR/docker-push.log"
 
           # Retrieve the digest directly using Azure CLI
           digest=$(az acr repository show \
