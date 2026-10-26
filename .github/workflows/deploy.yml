@@ -146,7 +146,7 @@ jobs:
       AKS_CLUSTER_NAME: ${{ inputs.aks_cluster_name }}
       AZURE_RESOURCE_GROUP: ${{ inputs.azure_resource_group }}
       KUBERNETES_NAMESPACE: ${{ inputs.kubernetes_namespace }}
-      IMAGE_URI: ${{ needs.scan-image.outputs.image_uri }}
+      IMAGE_URI: ${{ secrets.ACR_LOGIN_SERVER }}/${{ secrets.ACR_REPOSITORY }}@${{ needs.scan-image.outputs.image_digest }}
       TRUSTED_IMAGE_TAGGED: ${{ needs.scan-image.outputs.trusted_image_tagged }}
     steps:
       - name: Check out repository
