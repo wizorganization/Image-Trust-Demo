@@ -97,7 +97,7 @@ jobs:
           docker pull "$IMAGE_URI"
 
       - name: Scan image with Wiz
-        uses: wizorganization/wiz-workflows/.github/actions/wiz-image-scan@98667c009e39f49f2e54c986e5ae56f52a9eded1 # v1
+        uses: wizorganization/wiz-workflows/.github/actions/wiz-image-scan@142a8d3f68adb2357097a8c0a07c5ca9c010481d # v1
         with:
           image: ${{ steps.image.outputs.uri }}
           scan_types: all
