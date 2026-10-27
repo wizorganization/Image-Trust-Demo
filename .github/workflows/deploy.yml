@@ -118,6 +118,10 @@ jobs:
           wiz_client_id: ${{ secrets.WIZ_CLIENT_ID }}
           wiz_client_secret: ${{ secrets.WIZ_CLIENT_SECRET }}
 
+      - name: Show wizcli tag log
+        shell: bash
+        run: cat /tmp/wiz-image-reports/wizcli-tag.log
+
       - name: Log out of ACR
         if: always()
         continue-on-error: true
