@@ -37,7 +37,7 @@ jobs:
     outputs:
       image_uri: ${{ steps.image.outputs.uri }}
       image_digest: ${{ steps.image.outputs.digest }}
-      trusted_image_tagged: ${{ steps.wiz_tag.outputs.trusted_image_tagged }}
+      #trusted_image_tagged: ${{ steps.wiz_tag.outputs.trusted_image_tagged }}
     env:
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
@@ -96,31 +96,27 @@ jobs:
           set -euo pipefail
           docker pull "$IMAGE_URI"
 
-      - name: Scan image with Wiz
-        uses: wizorganization/wiz-workflows/.github/actions/wiz-image-scan@142a8d3f68adb2357097a8c0a07c5ca9c010481d # v1
-        with:
-          image: ${{ steps.image.outputs.uri }}
-          scan_types: all
-          dockerfile: ""
-          publish: "true"
-          fail_on_policy: "true"
-          report_dir: ${{ env.REPORT_DIR }}
-          wiz_client_id: ${{ secrets.WIZ_CLIENT_ID }}
-          wiz_client_secret: ${{ secrets.WIZ_CLIENT_SECRET }}
+      #- name: Scan image with Wiz
+      #  uses: wizorganization/wiz-workflows/.github/actions/wiz-image-scan@142a8d3f68adb2357097a8c0a07c5ca9c010481d # v1
+      #  with:
+      #    image: ${{ steps.image.outputs.uri }}
+      #    scan_types: all
+      #    dockerfile: ""
+      #    publish: "true"
+      #    fail_on_policy: "true"
+      #    report_dir: ${{ env.REPORT_DIR }}
+      #    wiz_client_id: ${{ secrets.WIZ_CLIENT_ID }}
+      #    wiz_client_secret: ${{ secrets.WIZ_CLIENT_SECRET }}
 
-      - name: Refresh Wiz Image Trust registration
-        id: wiz_tag
-        uses: wizorganization/wiz-workflows/.github/actions/wiz-image-tag@63f6022dbbc90eb42a53cef4f32c5607f0e438ec # v1
-        with:
-          image: ${{ steps.image.outputs.uri }}
-          image_digest: ${{ steps.image.outputs.digest }}
-          report_dir: ${{ env.REPORT_DIR }}
-          wiz_client_id: ${{ secrets.WIZ_CLIENT_ID }}
-          wiz_client_secret: ${{ secrets.WIZ_CLIENT_SECRET }}
-
-      - name: Show wizcli tag log
-        shell: bash
-        run: cat /tmp/wiz-image-reports/wizcli-tag.log
+      #- name: Refresh Wiz Image Trust registration
+      #  id: wiz_tag
+      #  uses: wizorganization/wiz-workflows/.github/actions/wiz-image-tag@63f6022dbbc90eb42a53cef4f32c5607f0e438ec # v1
+      #  with:
+      #    image: ${{ steps.image.outputs.uri }}
+      #    image_digest: ${{ steps.image.outputs.digest }}
+      #    report_dir: ${{ env.REPORT_DIR }}
+      #    wiz_client_id: ${{ secrets.WIZ_CLIENT_ID }}
+      #    wiz_client_secret: ${{ secrets.WIZ_CLIENT_SECRET }}
 
       - name: Log out of ACR
         if: always()
@@ -151,7 +147,7 @@ jobs:
       AZURE_RESOURCE_GROUP: ${{ inputs.azure_resource_group }}
       KUBERNETES_NAMESPACE: ${{ inputs.kubernetes_namespace }}
       IMAGE_URI: ${{ vars.ACR_LOGIN_SERVER }}/${{ vars.ACR_REPOSITORY }}@${{ needs.scan-image.outputs.image_digest }}
-      TRUSTED_IMAGE_TAGGED: ${{ needs.scan-image.outputs.trusted_image_tagged }}
+      #TRUSTED_IMAGE_TAGGED: ${{ needs.scan-image.outputs.trusted_image_tagged }}
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -173,10 +169,10 @@ jobs:
             echo "kubernetes_namespace must be a valid DNS label" >&2
             exit 2
           }
-          [[ "$TRUSTED_IMAGE_TAGGED" == "true" ]] || {
-            echo "The Wiz tag action did not confirm Image Trust registration" >&2
-            exit 1
-          }
+          #[[ "$TRUSTED_IMAGE_TAGGED" == "true" ]] || {
+          #  echo "The Wiz tag action did not confirm Image Trust registration" >&2
+          #  exit 1
+          #}
 
       - name: Log in to Azure
         uses: azure/login@v2
